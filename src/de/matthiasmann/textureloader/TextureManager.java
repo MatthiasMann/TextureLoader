@@ -63,11 +63,37 @@ public class TextureManager {
     int sweepTimeout;
     int sweepIndex;
 
+    /**
+     * Creates a texture manager which uses a single threaded {@link ExecutorService} to
+     * perform async loading of textures.
+     * <p>It is important to call {@link AsyncExecution#executeQueuedJobs() } on the
+     * main thread at least once per frame.</p>
+     * 
+     * @param asyncExecution the {@link AsyncExecution} instance used to bridge threads
+     * @throws NullPointerException when asyncExecution is null
+     */
     public TextureManager(AsyncExecution asyncExecution) {
         this(asyncExecution, Executors.newSingleThreadExecutor());
     }
 
+    /**
+     * Creates a texture manager which uses the specified {@link ExecutorService} to
+     * perform async loading of textures.
+     * <p>It is important to call {@link AsyncExecution#executeQueuedJobs() } on the
+     * main thread at least once per frame.</p>
+     * 
+     * @param asyncExecution the {@link AsyncExecution} instance used to bridge threads
+     * @param executor the ExecutorService used to load textures asynchronous to the GL thread
+     * @throws NullPointerException when one of the arguments is null
+     */
     public TextureManager(AsyncExecution asyncExecution, ExecutorService executor) {
+        if(asyncExecution == null) {
+            throw new NullPointerException("asyncExecution");
+        }
+        if(executor == null) {
+            throw new NullPointerException("executor");
+        }
+        
         this.asyncExecution = asyncExecution;
         this.executor = executor;
         
