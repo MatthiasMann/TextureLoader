@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2011, Matthias Mann
+ * Copyright (c) 2008-2012, Matthias Mann
  *
  * All rights reserved.
  *
@@ -176,7 +176,14 @@ public class TextureManager {
         invoke(open, open);
     }
 
-    static TextureLoader createTextureLoader(URL url) {
+    /**
+     * Constructs a {@link TextureLoader} for the given URL.
+     * <p>The file extension is used to select which subclass to use.</p>
+     * <p>The following file extensions are supported: {@code PNG, JPG, TGA and BMP }</p>
+     * @param url
+     * @return 
+     */
+    public static TextureLoader createTextureLoader(URL url) {
         String path = url.getPath();
         if(endsWithIgnoreCase(path, ".png")) {
             return new TextureLoaderPNG(url);

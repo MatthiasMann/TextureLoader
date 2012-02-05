@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2011, Matthias Mann
+ * Copyright (c) 2008-2012, Matthias Mann
  *
  * All rights reserved.
  *
@@ -40,7 +40,7 @@ import java.nio.IntBuffer;
  *
  * @author Matthias Mann
  */
-class TextureLoaderTGA extends TextureLoader {
+public class TextureLoaderTGA extends TextureLoader {
 
     private byte[] header;
     private int[] palette;
