@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2011, Matthias Mann
+ * Copyright (c) 2008-2012, Matthias Mann
  *
  * All rights reserved.
  *
@@ -124,13 +124,12 @@ public final class Texture {
             ByteBuffer byteBuffer = textureBuffer.map();
             try {
                 textureLoader.decode(byteBuffer);
-                Texture texture = new Texture(width, height,
-                        textureLoader.getFormat());
-                texture.upload(0, 0, width, height, textureBuffer);
-                return texture;
             } finally {
                 textureBuffer.unmap();
             }
+            Texture texture = new Texture(width, height, textureLoader.getFormat());
+            texture.upload(0, 0, width, height, textureBuffer);
+            return texture;
         } finally {
             textureBuffer.dispose();
         }
