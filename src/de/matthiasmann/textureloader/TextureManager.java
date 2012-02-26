@@ -43,6 +43,22 @@ import java.util.logging.Logger;
  * A texture manager which will load texture asynchronous on damand and also
  * unloads them when not used for a certain amount of time.
  * 
+ * <p>Example main loop:</p><pre>// before main loop
+AsyncExecution async = new AsyncExecution();
+TextureManager tm = new TextureManager(async);
+...
+// main loop
+while(!Display.isCloseRequested()) {
+   GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+   
+   async.executeQueuedJobs();
+   tm.nextFrame();
+   
+   handleInput();
+   renderStuff();
+   
+   Display.update();
+}</pre>
  * @author Matthias Mann
  */
 public class TextureManager {
