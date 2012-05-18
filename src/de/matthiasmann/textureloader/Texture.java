@@ -168,13 +168,27 @@ public final class Texture {
     }
     
     /**
-     * Uploads texture data
+     * Returns true when the texture has been deleted
+     * @return true when the texture has been deleted
+     * @see #delete() 
+     */
+    public boolean isDeleted() {
+        return isManaged() && id == 0;
+    }
+    
+    /**
+     * Uploads texture data.
+     * Can only be called on unmanaged textures.
      * 
      * @param x the horizontal start of the area to modify
      * @param y the vertical start of the area to modify
      * @param width the width of the area to modify
      * @param height the height of the area to modify
      * @param bb the direct ByteBuffer containing the texture data - interpreted as unsigned bytes
+     * 
+     * @throws IllegalStateException when this texture has already been deleted
+     * @throws UnsupportedOperationException when this texture is managed
+     * @see #isManaged() 
      */
     public void upload(int x, int y, int width, int height, ByteBuffer bb) {
         checkNotManaged();
@@ -183,13 +197,18 @@ public final class Texture {
     }
 
     /**
-     * Uploads texture data
+     * Uploads texture data.
+     * Can only be called on unmanaged textures.
      * 
      * @param x the horizontal start of the area to modify
      * @param y the vertical start of the area to modify
      * @param width the width of the area to modify
      * @param height the height of the area to modify
      * @param ib the direct IntBuffer containing the texture data - interpreted as unsigned bytes
+     * 
+     * @throws IllegalStateException when this texture has already been deleted
+     * @throws UnsupportedOperationException when this texture is managed
+     * @see #isManaged() 
      */
     public void upload(int x, int y, int width, int height, IntBuffer ib) {
         checkNotManaged();
@@ -198,22 +217,47 @@ public final class Texture {
     }
 
     /**
-     * Uploads texture data
+     * Uploads texture data.
+     * Can only be called on unmanaged textures.
+     * 
      * 
      * @param x the horizontal start of the area to modify
      * @param y the vertical start of the area to modify
      * @param width the width of the area to modify
      * @param height the height of the area to modify
      * @param buf the TextureBuffer containing the texture data - interpreted as unsigned bytes
+     * 
+     * @throws IllegalStateException when this texture has already been deleted
+     * @throws UnsupportedOperationException when this texture is managed
+     * @see #isManaged() 
      */
     public void upload(int x, int y, int width, int height, TextureBuffer buf) {
         checkNotManaged();
         uploadInt(x, y, width, height, buf);
     }
     
+    /**
+     * Deletes this texture.
+     * Can only be called on unmanaged textures.
+     * 
+     * @throws IllegalStateException when this texture has already been deleted
+     * @throws UnsupportedOperationException when this texture is managed
+     */
+    public void delete() {
+        checkNotManaged();
+        checkNotDeleted();
+        destroy();
+    }
+    
     private void checkNotManaged() {
         if(isManaged()) {
             throw new UnsupportedOperationException("Can't modify managed textures");
+        }
+    }
+    
+    private void checkNotDeleted() {
+        if(id == 0) {
+            throw new IllegalStateException("Texture was deleted");
         }
     }
     
@@ -238,6 +282,8 @@ public final class Texture {
     /**
      * Binds the texture for rendering. If the texture is managed and not yet loaded
      * then it's loading will be started asynchronously.
+     * 
+     * @throws IllegalStateException when this texture has already been deleted
      */
     public void bind() {
         if(manager != null) {
@@ -245,6 +291,8 @@ public final class Texture {
             if(id == 0) {
                 manager.loadTexture(this);
             }
+        } else {
+            checkNotDeleted();
         }
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, id);
     }
