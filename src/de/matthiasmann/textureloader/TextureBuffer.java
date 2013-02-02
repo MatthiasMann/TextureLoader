@@ -177,7 +177,7 @@ public abstract class TextureBuffer {
         TextureBufferPool(int size) {
             bb = getPoolBuffer();
             if(bb == null || bb.capacity() < size) {
-                bb = BufferUtils.createByteBuffer((size + ROUND_SIZE - 1) & ~ROUND_SIZE);
+                bb = BufferUtils.createByteBuffer((size + ROUND_SIZE - 1) & ~(ROUND_SIZE-1));
             } else {
                 pool.set(null);
             }
