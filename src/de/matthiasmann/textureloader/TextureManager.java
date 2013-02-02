@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2012, Matthias Mann
+ * Copyright (c) 2008-2013, Matthias Mann
  *
  * All rights reserved.
  *
@@ -29,6 +29,7 @@
  */
 package de.matthiasmann.textureloader;
 
+import de.matthiasmann.textureloader.Texture.MipMapMode;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -43,7 +44,11 @@ import java.util.logging.Logger;
  * A texture manager which will load texture asynchronous on damand and also
  * unloads them when not used for a certain amount of time.
  * 
+ * <p>To use this class with OpenGL core profile you need to enable core
+ * profile mode before creating the TextureManager.</p>
+ * 
  * <p>Example main loop:</p><pre>// before main loop
+Texture.setUseCoreProfile(true/false); // this depends on your selected OpenGL profile
 AsyncExecution async = new AsyncExecution();
 TextureManager tm = new TextureManager(async);
 ...
@@ -60,6 +65,7 @@ while(!Display.isCloseRequested()) {
    Display.update();
 }</pre>
  * @author Matthias Mann
+ * @see Texture#setUseCoreProfile(boolean) 
  */
 public class TextureManager {
 
@@ -74,6 +80,7 @@ public class TextureManager {
     final Texture dummyTexture;
     final HashMap<String, Texture> textures;
     final ArrayList<Texture> activeTextures;
+    final Texture.MipMapMode mipMapMode;
 
     long currentFrame;
     int sweepTimeout;
@@ -113,28 +120,44 @@ public class TextureManager {
         this.asyncExecution = asyncExecution;
         this.executor = executor;
         
-        this.dummyTexture = new Texture(2, 2, Texture.Format.LUMINANCE);
+        this.dummyTexture = new Texture(1, 1, Texture.Format.RGBA);
         this.textures = new HashMap<String, Texture>();
         this.activeTextures = new ArrayList<Texture>();
+        this.mipMapMode = Texture.decideMipMapMode();
 
-        ByteBuffer bb = ByteBuffer.allocateDirect(2*2);
-        bb.put((byte)0x00).put((byte)0xFF).put((byte)0xFF).put((byte)0x00).flip();
-        dummyTexture.upload(0, 0, 2, 2, bb);
+        // create a 1x1 fully transparent texture - byte order doesn't matter for 0
+        ByteBuffer bb = ByteBuffer.allocateDirect(4);
+        bb.putInt(0).flip();
+        dummyTexture.upload(0, 0, 1, 1, bb);
     }
 
     /**
      * Creates a managed texture instance for the specified URL.
      * <p>Textures are cached using their {@link URL#toString() } as a key.</p>
      * <p>The texture is not loaded until it is first used.</p>
+     * <p>The mipMapMode is dertermined based on {@link Texture#decideMipMapMode() }</p>
      * 
      * @param url the URL to load
      * @return the managed texture object
      */
-    public synchronized Texture getTexture(URL url) {
+    public Texture getTexture(URL url) {
+        return getTexture(url, mipMapMode);
+    }
+    /**
+     * Creates a managed texture instance for the specified URL.
+     * <p>Textures are cached using their {@link URL#toString() } as a key.</p>
+     * <p>The texture is not loaded until it is first used.</p>
+     * <p>The mipMapMode can only be specified the first time the texture is requested.</p>
+     * 
+     * @param url the URL to load
+     * @param mipMapMode the mipMapMode which should be used with this texture
+     * @return the managed texture object
+     */
+    public synchronized Texture getTexture(URL url, MipMapMode mipMapMode) {
         String key = url.toString();
         Texture tex = textures.get(key);
         if(tex == null) {
-            tex = new Texture(this, url);
+            tex = new Texture(this, url, mipMapMode);
             textures.put(key, tex);
         }
         return tex;

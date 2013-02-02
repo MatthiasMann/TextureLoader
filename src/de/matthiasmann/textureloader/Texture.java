@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2012, Matthias Mann
+ * Copyright (c) 2008-2013, Matthias Mann
  *
  * All rights reserved.
  *
@@ -33,14 +33,21 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import org.lwjgl.opengl.ContextCapabilities;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 import org.lwjgl.opengl.GL14;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.opengl.GLContext;
 
 /**
  * A texture class. All methods need to be called from the GL thread.
  * 
+ * <p>To use this class with OpenGL core profile you need to enable core
+ * profile mode before creating the first texture.</p>
+ * 
  * @author Matthias Mann
+ * @see #setUseCoreProfile(boolean) 
  */
 public final class Texture {
 
@@ -58,6 +65,9 @@ public final class Texture {
         }
 
         public int getGLFormat() {
+            if(isUseCoreProfile() && glFormat == GL11.GL_LUMINANCE) {
+                return GL11.GL_RED;
+            }
             return glFormat;
         }
 
@@ -65,38 +75,92 @@ public final class Texture {
             return bpp;
         }
     }
+    
+    public enum MipMapMode {
+        NONE,
+        /**
+         * Will use {@link GL14#GL_GENERATE_MIPMAP}
+         */
+        GL14,
+        /**
+         * Will use {@link GL30#glGenerateMipmap(int) }
+         */
+        GL30
+    }
 
+    private static boolean useCoreProfile;
+    
     final TextureManager manager;
     final URL url;
+    final MipMapMode mipMapMode;
     int id;
     int width;
     int height;
     Format format;
     long lastUsedFrame;
 
-    Texture(TextureManager manager, URL url) {
+    Texture(TextureManager manager, URL url, MipMapMode mipMapMode) {
         this.manager = manager;
         this.url = url;
+        this.mipMapMode = mipMapMode;
     }
 
     /**
-     * Creates an unmanaged texture
+     * Creates an unmanaged texture.
+     * The mipMapMode is determined by caling {@link #decideMipMapMode() }
      *
      * @param width the width
      * @param height the height
      * @param format the format of the image data
      */
     public Texture(int width, int height, Format format) {
+        this(width, height, format, decideMipMapMode());
+    }
+    
+    /**
+     * Creates an unmanaged texture
+     *
+     * @param width the width
+     * @param height the height
+     * @param format the format of the image data
+     * @param mipMapMode the mipMapMode which should be used 
+     */
+    public Texture(int width, int height, Format format, MipMapMode mipMapMode) {
         if(format == null) {
             throw new NullPointerException("format");
+        }
+        if(mipMapMode == null) {
+            throw new NullPointerException("mipMapMode");
         }
         this.manager = null;
         this.url = null;
         this.width = width;
         this.height = height;
         this.format = format;
+        this.mipMapMode = mipMapMode;
 
         createTexture();
+    }
+
+    /**
+     * Returns true when core profile mode is active
+     * @return true when core profile mode is active
+     * @see #setUseCoreProfile(boolean) 
+     */
+    public static boolean isUseCoreProfile() {
+        return useCoreProfile;
+    }
+
+    /**
+     * Sets core profile mode
+     * 
+     * <p>In core profile mode {@link Format#LUMINANCE} is mapped to {@link GL11#GL_RED}
+     * and mipMapMode is forced to {@link MipMapMode#GL30}.</p>
+     * 
+     * @param useCoreProfile true for core profile, false for OpenGL 2.0 or compatibility profile
+     */
+    public static void setUseCoreProfile(boolean useCoreProfile) {
+        Texture.useCoreProfile = useCoreProfile;
     }
 
     /**
@@ -133,6 +197,29 @@ public final class Texture {
         } finally {
             textureBuffer.dispose();
         }
+    }
+    
+    /**
+     * Decides the mipMapMode based on the available GL features.
+     * 
+     * @return {@link MipMapMode#GL30} when core profile mode is enabled,
+     *         {@link MipMapMode#GL30} when OpenGL 3.0 is supported,
+     *         {@link MipMapMode#GL14} when OpenGL 1.4 is supported,
+     *         {@link MipMapMode#NONE} is no supported method was found.
+     * @see #setUseCoreProfile(boolean) 
+     */
+    public static MipMapMode decideMipMapMode() {
+        if(isUseCoreProfile()) {
+            return MipMapMode.GL30;
+        }
+        ContextCapabilities caps = GLContext.getCapabilities();
+        if(caps.OpenGL30) {
+            return MipMapMode.GL30;
+        }
+        if(caps.OpenGL14) {
+            return MipMapMode.GL14;
+        }
+        return MipMapMode.NONE;
     }
     
     /**
@@ -193,7 +280,8 @@ public final class Texture {
     public void upload(int x, int y, int width, int height, ByteBuffer bb) {
         checkNotManaged();
         bind();
-        GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, x, y, width, height, format.glFormat, GL11.GL_UNSIGNED_BYTE, bb);
+        GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, x, y, width, height, format.getGLFormat(), GL11.GL_UNSIGNED_BYTE, bb);
+        generateMipMaps();
     }
 
     /**
@@ -213,7 +301,8 @@ public final class Texture {
     public void upload(int x, int y, int width, int height, IntBuffer ib) {
         checkNotManaged();
         bind();
-        GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, x, y, width, height, format.glFormat, GL11.GL_UNSIGNED_BYTE, ib);
+        GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, x, y, width, height, format.getGLFormat(), GL11.GL_UNSIGNED_BYTE, ib);
+        generateMipMaps();
     }
 
     /**
@@ -268,14 +357,21 @@ public final class Texture {
             assert !pbo.isMapped();
             pbo.bind();
             try {
-                GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, x, y, width, height, format.glFormat, GL11.GL_UNSIGNED_BYTE, 0);
+                GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, x, y, width, height, format.getGLFormat(), GL11.GL_UNSIGNED_BYTE, 0);
             } finally {
                 pbo.unbind();
             }
         } else if(buf instanceof TextureBuffer.TextureBufferPool) {
-            GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, x, y, width, height, format.glFormat, GL11.GL_UNSIGNED_BYTE, buf.map());
+            GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, x, y, width, height, format.getGLFormat(), GL11.GL_UNSIGNED_BYTE, buf.map());
         } else {
             throw new IllegalArgumentException("Unsupported TextureBuffer type");
+        }
+        generateMipMaps();
+    }
+    
+    void generateMipMaps() {
+        if(mipMapMode == MipMapMode.GL30) {
+            GL30.glGenerateMipmap(GL11.GL_TEXTURE_2D);
         }
     }
 
@@ -300,10 +396,23 @@ public final class Texture {
     void createTexture() {
         id = GL11.glGenTextures();
         bind();
-        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA, width, height, 0, format.glFormat, GL11.GL_UNSIGNED_BYTE, (ByteBuffer)null);
+        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA, width, height, 0, format.getGLFormat(), GL11.GL_UNSIGNED_BYTE, (ByteBuffer)null);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR_MIPMAP_LINEAR);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL14.GL_GENERATE_MIPMAP, GL11.GL_TRUE);
+        switch(mipMapMode) {
+            case NONE:
+                GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
+                break;
+            case GL14:
+                GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR_MIPMAP_LINEAR);
+                GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL14.GL_GENERATE_MIPMAP, GL11.GL_TRUE);
+                break;
+            case GL30:
+                GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR_MIPMAP_LINEAR);
+                // mip map generation is deferred to after texture upload
+                break;
+            default:
+                throw new AssertionError("Unimplemented MipMapMode: " + mipMapMode);
+        }
     }
 
     void destroy() {
