@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2011, Matthias Mann
+ * Copyright (c) 2008-2013, Matthias Mann
  *
  * All rights reserved.
  *
@@ -37,13 +37,20 @@ import org.lwjgl.opengl.ARBBufferObject;
 import org.lwjgl.opengl.ARBMapBufferRange;
 import org.lwjgl.opengl.ARBPixelBufferObject;
 import org.lwjgl.opengl.ContextCapabilities;
+import org.lwjgl.opengl.GL15;
+import org.lwjgl.opengl.GL21;
+import org.lwjgl.opengl.GL30;
 import org.lwjgl.opengl.GLContext;
 
 /**
  * A buffer for texture data. If supported it is backed by an OpenGL PBO.
  * 
+ * <p>To use this class with OpenGL core profile you need to enable core
+ * profile mode before creating the TextureManager.</p>
+ * 
  * @see ARBPixelBufferObject
  * @author Matthias Mann
+ * @see Texture#setUseCoreProfile(boolean) 
  */
 public abstract class TextureBuffer {
 
@@ -51,7 +58,13 @@ public abstract class TextureBuffer {
 
     public static TextureBuffer create(int size) {
         if(USE_PBO) {
+            if(Texture.isUseCoreProfile()) {
+                return new TextureBufferGL30(size);
+            }
             ContextCapabilities caps = GLContext.getCapabilities();
+            if(caps.OpenGL30) {
+                return new TextureBufferGL30(size);
+            }
             if(caps.GL_ARB_pixel_buffer_object) {
                 if(caps.GL_ARB_map_buffer_range) {
                     return new TextureBufferPBO_MBR(size);
@@ -165,6 +178,71 @@ public abstract class TextureBuffer {
                     0, size,
                     ARBMapBufferRange.GL_MAP_INVALIDATE_BUFFER_BIT |
                     ARBMapBufferRange.GL_MAP_WRITE_BIT, bb);
+        }
+    }
+    
+    static class TextureBufferGL30 extends TextureBuffer {
+        final int size;
+        int id;
+        ByteBuffer bb;
+        boolean mapped;
+
+        TextureBufferGL30(int size) {
+            this.size = size;
+            this.id = GL15.glGenBuffers();
+            
+            bind();
+            GL15.glBufferData(GL21.GL_PIXEL_UNPACK_BUFFER, size, GL15.GL_DYNAMIC_DRAW);
+            unbind();
+        }
+
+        @Override
+        public void dispose() {
+            if(id != 0) {
+                unmap();
+                GL15.glDeleteBuffers(id);
+                id = 0;
+            }
+        }
+
+        public boolean isMapped() {
+            return mapped;
+        }
+
+        @Override
+        public ByteBuffer map() {
+            if(!mapped) {
+                bind();
+                bb = GL30.glMapBufferRange(
+                        GL21.GL_PIXEL_UNPACK_BUFFER, 0, size,
+                        GL30.GL_MAP_INVALIDATE_BUFFER_BIT |
+                        GL30.GL_MAP_WRITE_BIT, bb);
+                mapped = true;
+                unbind();
+            }
+            bb.order(ByteOrder.nativeOrder()).clear();
+            return bb;
+        }
+
+        @Override
+        public void unmap() {
+            if(mapped) {
+                bind();
+                GL15.glUnmapBuffer(GL21.GL_PIXEL_UNPACK_BUFFER);
+                unbind();
+                mapped = false;
+            }
+        }
+
+        final void bind() {
+            if(id == 0) {
+                throw new IllegalStateException("Already disposed");
+            }
+            GL15.glBindBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, id);
+        }
+
+        final void unbind() {
+            GL15.glBindBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, 0);
         }
     }
 
