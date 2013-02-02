@@ -186,6 +186,7 @@ public final class Texture {
             textureLoader.getFormat().getBytesPerPixel());
         try {
             ByteBuffer byteBuffer = textureBuffer.map();
+            byteBuffer.clear();
             try {
                 textureLoader.decode(byteBuffer);
             } finally {
