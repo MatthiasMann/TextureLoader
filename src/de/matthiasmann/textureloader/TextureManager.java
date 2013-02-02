@@ -302,6 +302,7 @@ public class TextureManager {
 
         @Override
         public TextureLoader call() throws Exception {
+            byteBuffer.clear();
             textureLoader.decode(byteBuffer);
             byteBuffer.flip();
             return textureLoader;
