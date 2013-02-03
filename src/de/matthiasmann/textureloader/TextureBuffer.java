@@ -96,6 +96,9 @@ public abstract class TextureBuffer {
      */
     public abstract void dispose();
 
+    abstract boolean isPBOandBind();
+    abstract void unbindPBO();
+    
     static class TextureBufferPBO extends TextureBuffer {
         final int size;
         int id;
@@ -110,7 +113,7 @@ public abstract class TextureBuffer {
             ARBBufferObject.glBufferDataARB(
                     ARBPixelBufferObject.GL_PIXEL_UNPACK_BUFFER_ARB, size,
                     ARBBufferObject.GL_DYNAMIC_DRAW_ARB);
-            unbind();
+            unbindPBO();
         }
 
         @Override
@@ -132,7 +135,7 @@ public abstract class TextureBuffer {
                 bind();
                 doMap();
                 mapped = true;
-                unbind();
+                unbindPBO();
             }
             bb.order(ByteOrder.nativeOrder()).clear();
             return bb;
@@ -143,7 +146,7 @@ public abstract class TextureBuffer {
             if(mapped) {
                 bind();
                 ARBBufferObject.glUnmapBufferARB(ARBPixelBufferObject.GL_PIXEL_UNPACK_BUFFER_ARB);
-                unbind();
+                unbindPBO();
                 mapped = false;
             }
         }
@@ -154,6 +157,13 @@ public abstract class TextureBuffer {
                     ARBBufferObject.GL_WRITE_ONLY_ARB, size, bb);
         }
 
+        @Override
+        boolean isPBOandBind() {
+            assert !isMapped();
+            bind();
+            return true;
+        }
+
         final void bind() {
             if(id == 0) {
                 throw new IllegalStateException("Already disposed");
@@ -161,7 +171,8 @@ public abstract class TextureBuffer {
             ARBBufferObject.glBindBufferARB(ARBPixelBufferObject.GL_PIXEL_UNPACK_BUFFER_ARB, id);
         }
 
-        final void unbind() {
+        @Override
+        final void unbindPBO() {
             ARBBufferObject.glBindBufferARB(ARBPixelBufferObject.GL_PIXEL_UNPACK_BUFFER_ARB, 0);
         }
     }
@@ -193,7 +204,7 @@ public abstract class TextureBuffer {
             
             bind();
             GL15.glBufferData(GL21.GL_PIXEL_UNPACK_BUFFER, size, GL15.GL_DYNAMIC_DRAW);
-            unbind();
+            unbindPBO();
         }
 
         @Override
@@ -218,7 +229,7 @@ public abstract class TextureBuffer {
                         GL30.GL_MAP_INVALIDATE_BUFFER_BIT |
                         GL30.GL_MAP_WRITE_BIT, bb);
                 mapped = true;
-                unbind();
+                unbindPBO();
             }
             bb.order(ByteOrder.nativeOrder()).clear();
             return bb;
@@ -229,9 +240,16 @@ public abstract class TextureBuffer {
             if(mapped) {
                 bind();
                 GL15.glUnmapBuffer(GL21.GL_PIXEL_UNPACK_BUFFER);
-                unbind();
+                unbindPBO();
                 mapped = false;
             }
+        }
+
+        @Override
+        boolean isPBOandBind() {
+            assert !isMapped();
+            bind();
+            return true;
         }
 
         final void bind() {
@@ -241,7 +259,8 @@ public abstract class TextureBuffer {
             GL15.glBindBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, id);
         }
 
-        final void unbind() {
+        @Override
+        final void unbindPBO() {
             GL15.glBindBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, 0);
         }
     }
@@ -280,6 +299,16 @@ public abstract class TextureBuffer {
 
         @Override
         public void unmap() {
+        }
+
+        @Override
+        boolean isPBOandBind() {
+            return false;
+        }
+
+        @Override
+        void unbindPBO() {
+            throw new UnsupportedOperationException();
         }
 
         private static ByteBuffer getPoolBuffer() {

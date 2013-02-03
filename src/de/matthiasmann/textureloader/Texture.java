@@ -353,14 +353,11 @@ public final class Texture {
     
     void uploadInt(int x, int y, int width, int height, TextureBuffer buf) {
         bind();
-        if(buf instanceof TextureBuffer.TextureBufferPBO) {
-            TextureBuffer.TextureBufferPBO pbo = (TextureBuffer.TextureBufferPBO)buf;
-            assert !pbo.isMapped();
-            pbo.bind();
+        if(buf.isPBOandBind()) {
             try {
                 GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, x, y, width, height, format.getGLFormat(), GL11.GL_UNSIGNED_BYTE, 0);
             } finally {
-                pbo.unbind();
+                buf.unbindPBO();
             }
         } else if(buf instanceof TextureBuffer.TextureBufferPool) {
             GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, x, y, width, height, format.getGLFormat(), GL11.GL_UNSIGNED_BYTE, buf.map());
