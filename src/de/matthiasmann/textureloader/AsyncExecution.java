@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2011, Matthias Mann
+ * Copyright (c) 2008-2013, Matthias Mann
  *
  * All rights reserved.
  *
@@ -30,7 +30,7 @@
 package de.matthiasmann.textureloader;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -88,7 +88,7 @@ public class AsyncExecution {
      * @param listener the listener to invoke once the job has completed
      * @throws NullPointerException when any of the arguments is null.
      */
-    public<V> void invokeAsync(Executor executor, Callable<V> asyncJob, AsyncCompletionListener<V> listener) {
+    public<V> void invokeAsync(ExecutorService executor, Callable<V> asyncJob, AsyncCompletionListener<V> listener) {
         if(executor == null) {
             throw new NullPointerException("executor");
         }
@@ -98,7 +98,7 @@ public class AsyncExecution {
         if(listener == null) {
             throw new NullPointerException("listener");
         }
-        executor.execute(new AC<V>(asyncJob, null, listener));
+        executor.submit((Callable<V>)new AC<V>(asyncJob, null, listener));
     }
     
     /**
@@ -111,7 +111,7 @@ public class AsyncExecution {
      * @param listener the listener to invoke once the job has completed
      * @throws NullPointerException when any of the arguments is null.
      */
-    public void invokeAsync(Executor executor, Runnable asyncJob, AsyncCompletionListener<Void> listener) {
+    public void invokeAsync(ExecutorService executor, Runnable asyncJob, AsyncCompletionListener<Void> listener) {
         if(executor == null) {
             throw new NullPointerException("executor");
         }
@@ -121,7 +121,7 @@ public class AsyncExecution {
         if(listener == null) {
             throw new NullPointerException("listener");
         }
-        executor.execute(new AC<Void>(null, asyncJob, listener));
+        executor.submit((Callable<Void>)new AC<Void>(null, asyncJob, listener));
     }
     
     class AC<V> implements Callable<V>, Runnable {
