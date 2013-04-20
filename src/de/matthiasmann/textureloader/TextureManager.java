@@ -236,6 +236,28 @@ public class TextureManager {
         }
         return null;
     }
+    
+    /**
+     * Manually registers a TextureLoaderFactory
+     * 
+     * <p>Texture loader factories are automatically registered via
+     * {@link ServiceLoader} on first use.</p>
+     * 
+     * <p>Manuall registration should only be done in case a
+     * TextureLoaderFactory needs to be registered later or from other
+     * sources.</p>
+     * 
+     * <p>When an extension is already registered it will be replaced by
+     * the new TextureLoaderFactory and a warning is logged.</p>
+     * 
+     * @param tlf The TextureLoaderFactory to be registered
+     */
+    public static void registerTextureLoaderFactory(TextureLoaderFactory tlf) {
+        if(tlf == null) {
+            throw new NullPointerException("tlf");
+        }
+        Factories.instance.registerTextureLoaderFactory(tlf);
+    }
 
     synchronized<T> void invoke(Callable<T> c, AsyncCompletionListener<T> acl) {
         asyncExecution.invokeAsync(executor, c, acl);
@@ -332,7 +354,7 @@ public class TextureManager {
         }
     }
 
-    static class Factories {
+    static final class Factories {
         static final Factories instance = new Factories();
         
         private final HashMap<String, TextureLoaderFactory> factories;
@@ -342,18 +364,25 @@ public class TextureManager {
             
             ServiceLoader<TextureLoaderFactory> sl = ServiceLoader.load(TextureLoaderFactory.class);
             for(TextureLoaderFactory tlf : sl) {
-                if(tlf.isAvailable()) {
-                    for(String ext : tlf.getSupportedExtension()) {
-                        assert ext.startsWith(".") : "Extension must start with a '.'";
-                        TextureLoaderFactory old = factories.put(ext, tlf);
-                        if(old != null) {
-                            LOGGER.log(Level.WARNING, "Extension {0} was already registered to {1} and has been replaced by {2}",
-                                    new Object[] { ext, old.getDescription(), tlf.getDescription() });
-                        }
+                registerTextureLoaderFactory(tlf);
+            }
+        }
+        
+        void registerTextureLoaderFactory(TextureLoaderFactory tlf) {
+            if(tlf.isAvailable()) {
+                String[] supportedExtensions = tlf.getSupportedExtensions();
+                assert supportedExtensions.length > 0 : "TextureLoaderFactory must have at least one extension";
+                
+                for(String ext : supportedExtensions) {
+                    assert ext.startsWith(".") : "Extension must start with a '.'";
+                    TextureLoaderFactory old = factories.put(ext, tlf);
+                    if(old != null) {
+                        LOGGER.log(Level.WARNING, "Extension {0} was already registered to {1} and has been replaced by {2}",
+                                new Object[] { ext, old.getDescription(), tlf.getDescription() });
                     }
-                } else {
-                    LOGGER.log(Level.WARNING, "{0} is not available", tlf.getDescription());
                 }
+            } else {
+                LOGGER.log(Level.WARNING, "{0} is not available", tlf.getDescription());
             }
         }
         

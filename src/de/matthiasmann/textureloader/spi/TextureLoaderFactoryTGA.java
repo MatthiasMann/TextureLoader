@@ -46,7 +46,7 @@ public class TextureLoaderFactoryTGA implements TextureLoaderFactory {
     }
 
     @Override
-    public String[] getSupportedExtension() {
+    public String[] getSupportedExtensions() {
         return new String[] { ".tga" };
     }
 

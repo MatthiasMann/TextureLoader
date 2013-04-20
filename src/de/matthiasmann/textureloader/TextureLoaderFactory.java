@@ -58,7 +58,7 @@ public interface TextureLoaderFactory {
      * 
      * @return a list of lower case file extensions
      */
-    public String[] getSupportedExtension();
+    public String[] getSupportedExtensions();
     
     /**
      * Checks if the decoder is usable.

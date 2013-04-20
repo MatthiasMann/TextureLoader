@@ -52,7 +52,7 @@ public class TextureLoaderFactoryPNG implements TextureLoaderFactory {
     }
 
     @Override
-    public String[] getSupportedExtension() {
+    public String[] getSupportedExtensions() {
         return new String[] { ".png" };
     }
 
