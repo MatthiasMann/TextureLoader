@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2011, Matthias Mann
+ * Copyright (c) 2008-2013, Matthias Mann
  *
  * All rights reserved.
  *
@@ -27,9 +27,11 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package de.matthiasmann.textureloader;
+package de.matthiasmann.textureloader.spi;
 
-import de.matthiasmann.jpegdecoder.JPEGDecoder;
+import de.matthiasmann.textureloader.Texture;
+import de.matthiasmann.textureloader.TextureLoader;
+import de.matthiasmann.twl.utils.PNGDecoder;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -38,27 +40,26 @@ import java.nio.ByteBuffer;
  *
  * @author Matthias Mann
  */
-public class TextureLoaderJPEG extends TextureLoader {
+public class TextureLoaderPNG extends TextureLoader {
     
-    private JPEGDecoder decoder;
+    private PNGDecoder decoder;
 
-    public TextureLoaderJPEG(URL url) {
+    public TextureLoaderPNG(URL url) {
         super(url);
     }
 
     @Override
     public boolean open() throws IOException {
         inputStream = url.openStream();
-        decoder = new JPEGDecoder(inputStream);
-        decoder.decodeHeader();
-        width = decoder.getImageWidth();
-        height = decoder.getImageHeight();
-        format = Texture.Format.RGBA;
-        return decoder.startDecode();
+        decoder = new PNGDecoder(inputStream);
+        width = decoder.getWidth();
+        height = decoder.getHeight();
+        format = Texture.Format.BGRA;
+        return true;
     }
 
     @Override
     public void decode(ByteBuffer bb) throws IOException {
-        decoder.decodeRGB(bb, width*4, decoder.getNumMCURows());
+        decoder.decode(bb, width*4, PNGDecoder.Format.BGRA);
     }
 }

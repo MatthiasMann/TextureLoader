@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2012, Matthias Mann
+ * Copyright (c) 2008-2013, Matthias Mann
  *
  * All rights reserved.
  *
@@ -27,8 +27,10 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package de.matthiasmann.textureloader;
+package de.matthiasmann.textureloader.spi;
 
+import de.matthiasmann.textureloader.Texture;
+import de.matthiasmann.textureloader.TextureLoader;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.net.URL;

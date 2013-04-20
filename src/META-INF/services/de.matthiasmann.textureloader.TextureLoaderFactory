@@ -1,0 +1,4 @@
+de.matthiasmann.textureloader.spi.TextureLoaderFactoryBMP
+de.matthiasmann.textureloader.spi.TextureLoaderFactoryJPEG
+de.matthiasmann.textureloader.spi.TextureLoaderFactoryPNG
+de.matthiasmann.textureloader.spi.TextureLoaderFactoryTGA

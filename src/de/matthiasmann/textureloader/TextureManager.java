@@ -34,6 +34,8 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
+import java.util.ServiceLoader;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -73,7 +75,7 @@ public class TextureManager {
     static final int TEXTURES_TO_SWEEP_PER_FRAME = 10;
     
     static final Logger LOGGER = Logger.getLogger(TextureManager.class.getName());
-
+    
     final AsyncExecution asyncExecution;
     final ExecutorService executor;
     
@@ -224,17 +226,15 @@ public class TextureManager {
      */
     public static TextureLoader createTextureLoader(URL url) {
         String path = url.getPath();
-        if(endsWithIgnoreCase(path, ".png")) {
-            return new TextureLoaderPNG(url);
-        } else if(endsWithIgnoreCase(path, ".jpg")) {
-            return new TextureLoaderJPEG(url);
-        } else if(endsWithIgnoreCase(path, ".tga")) {
-            return new TextureLoaderTGA(url);
-        } else if(endsWithIgnoreCase(path, ".bmp")) {
-            return new TextureLoaderBMP(url);
-        } else {
-            return null;
+        int extIdx = path.lastIndexOf('.');
+        if(extIdx >= 0) {
+            String ext = path.substring(extIdx);
+            TextureLoaderFactory tlf = Factories.instance.find(ext);
+            if(tlf != null) {
+                return tlf.createTextureLoader(url);
+            }
         }
+        return null;
     }
 
     synchronized<T> void invoke(Callable<T> c, AsyncCompletionListener<T> acl) {
@@ -332,4 +332,33 @@ public class TextureManager {
         }
     }
 
+    static class Factories {
+        static final Factories instance = new Factories();
+        
+        private final HashMap<String, TextureLoaderFactory> factories;
+
+        Factories() {
+            factories = new HashMap<String, TextureLoaderFactory>();
+            
+            ServiceLoader<TextureLoaderFactory> sl = ServiceLoader.load(TextureLoaderFactory.class);
+            for(TextureLoaderFactory tlf : sl) {
+                if(tlf.isAvailable()) {
+                    for(String ext : tlf.getSupportedExtension()) {
+                        assert ext.startsWith(".") : "Extension must start with a '.'";
+                        TextureLoaderFactory old = factories.put(ext, tlf);
+                        if(old != null) {
+                            LOGGER.log(Level.WARNING, "Extension {0} was already registered to {1} and has been replaced by {2}",
+                                    new Object[] { ext, old.getDescription(), tlf.getDescription() });
+                        }
+                    }
+                } else {
+                    LOGGER.log(Level.WARNING, "{0} is not available", tlf.getDescription());
+                }
+            }
+        }
+        
+        TextureLoaderFactory find(String ext) {
+            return factories.get(ext.toLowerCase(Locale.ENGLISH));
+        }
+    }
 }
