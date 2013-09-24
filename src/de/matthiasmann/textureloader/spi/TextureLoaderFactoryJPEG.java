@@ -60,7 +60,7 @@ public class TextureLoaderFactoryJPEG implements TextureLoaderFactory {
     public boolean isAvailable() {
         try {
             return Modifier.isPublic(JPEGDecoder.class.getConstructor(InputStream.class).getModifiers());
-        } catch(Exception ex) {
+        } catch(Throwable ex) {
             return false;
         }
     }
