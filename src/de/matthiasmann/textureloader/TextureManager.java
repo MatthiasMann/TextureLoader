@@ -220,9 +220,11 @@ public class TextureManager {
     /**
      * Constructs a {@link TextureLoader} for the given URL.
      * <p>The file extension is used to select which subclass to use.</p>
-     * <p>The following file extensions are supported: {@code PNG, JPG, TGA and BMP }</p>
-     * @param url
-     * @return 
+     * <p>The supported extensions depend on which {@link TextureLoaderFactory}
+     * services are registered, the following are provided by the TextureLoader
+     * itself (if the required external decoders are present): {@code PNG, JPG, TGA and BMP }</p>
+     * @param url the URL of the texture to load
+     * @return the TextureLoader or null if no loader was found for that extension
      */
     public static TextureLoader createTextureLoader(URL url) {
         String path = url.getPath();
