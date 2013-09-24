@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2011, Matthias Mann
+ * Copyright (c) 2008-2013, Matthias Mann
  *
  * All rights reserved.
  *
@@ -31,7 +31,7 @@ package de.matthiasmann.textureloader;
 
 /**
  * A completion listener for async jobs. It is invoked via
- * {@link #invokeLater(java.lang.Runnable) }
+ * {@link AsyncExecution#invokeLater(java.lang.Runnable) }
  *
  * @param <V> the result type of the async job
  * @author Matthias Mann
